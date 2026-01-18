@@ -146,8 +146,30 @@ export default function Home() {
 
               <div className={`space-y-8 max-w-xl transition-all duration-500 ease-out ${isHeroDone ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}>
                 <div className="space-y-4">
-                  <label htmlFor="pdf" className="block text-sm font-bold uppercase tracking-[0.2em] text-blue-200">Study material (PDF)</label>
-                  <input id="pdf" type="file" accept="application/pdf" onChange={handleFileChange} className="block w-full cursor-pointer rounded-3xl border-2 border-dashed border-white/40 bg-background/20 px-8 py-10 text-base text-white hover:border-primary hover:bg-background/40 transition-all" />
+                  <label
+                    htmlFor="pdf"
+                    className="block text-sm font-bold uppercase tracking-[0.2em] text-blue-200"
+                  >
+                    Study material (PDF)
+                  </label>
+                  <label
+                    htmlFor="pdf"
+                    className="block w-full cursor-pointer rounded-3xl border-2 border-dashed border-white/40 bg-background/20 px-8 py-10 text-base text-white transition-all duration-300 hover:border-primary hover:bg-background/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <span className="block text-sm font-semibold text-blue-100 mb-2">
+                      Choose file
+                    </span>
+                    <span className="block text-xs text-blue-200 truncate">
+                      {file ? file.name : "Click here to select your study PDF"}
+                    </span>
+                  </label>
+                  <input
+                    id="pdf"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
                 </div>
                 <button type="button" onClick={handleUpload} disabled={!file || isLoading} className="relative mt-2 inline-flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-primary px-6 text-sm font-medium text-primary-foreground shadow-[0_0_50px_rgba(99,102,241,0.7)] hover:shadow-[0_0_80px_rgba(99,102,241,0.95)] transition-all">
                   {isLoading && <span className="mr-2 inline-block h-4 w-4 rounded-full border-2 border-secondary border-t-transparent animate-spin" />}
