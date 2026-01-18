@@ -7,55 +7,11 @@ from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
 from livekit.agents.voice_assistant import VoiceAssistant
 from livekit.plugins import openai, elevenlabs, deepgram
 try:
-    from .pdf_utils import pdf_to_string
+    from .study_material import get_study_material
 except ImportError:
-    from pdf_utils import pdf_to_string
+    from study_material import get_study_material
 
 load_dotenv()
-
-# --- 1. THE TOKEN COMPANY INTEGRATION (Mock) ---
-# In production, you would fetch this from your backend where the 
-# PDF was compressed.
-def get_study_material(pdf_path: str = None):
-    # Example: If a PDF path is provided, read it
-    if pdf_path:
-        #print(f"Reading PDF from: {pdf_path}")
-        pdf_text = pdf_to_string(pdf_path)
-        # You could then send this 'pdf_text' to the compression API
-        # or use it directly if it's small enough.
-        # For now, we'll continue with the mock flow below.
-
-    # Placeholder for The Token Company's output
-    response = requests.post(
-        "https://api.thetokencompany.com/v1/compress",
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "Bearer ttc_sk_VLh1ccJqgS77Dl_R49vxWNSOgl-C4NoHo_rLS96xWYo"
-        },
-        json={
-            "model": "bear-1",
-            "compression_settings": {
-                "aggressiveness": 0.5,
-                "max_output_tokens": None,
-                "min_output_tokens": None
-            },
-            "input": pdf_text
-        }
-    )
- 
-    result = response.json()
-    
-
-    return result["output"]
-    
-    # """
-    # [COMPRESSED_CONTEXT_START]
-    # Subject: History of the Internet.
-    # Key Concept 1: ARPANET founded in 1969.
-    # Key Concept 2: TCP/IP standardized in 1983.
-    # Key Concept 3: The dot-com bubble burst in 2000.
-    # [COMPRESSED_CONTEXT_END]
-    # """
 
 async def entrypoint(ctx: JobContext, pdf_path: str = None):
     # Connect to the room
