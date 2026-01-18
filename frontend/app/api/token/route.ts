@@ -13,6 +13,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing API Keys" }, { status: 500 });
   }
 
+  const uniqueRoomName = `exam-${agentId}-${Date.now()}`;
+
   const at = new AccessToken(apiKey, apiSecret, {
     identity: "student-" + Math.floor(Math.random() * 10000),
     ttl: "10m",
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
   // Grant permissions to the room
   at.addGrant({
     roomJoin: true,
-    room: `exam-${agentId}`, // Unique room for this study session
+    room: uniqueRoomName, // Unique room for this study session
     canPublish: true,
     canSubscribe: true,
   });

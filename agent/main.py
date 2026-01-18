@@ -9,6 +9,9 @@ from livekit.agents import (
     JobContext,
     WorkerOptions,
     cli,
+    #UserInputTranscribedEvent,
+    #ConversationItemAddedEvent,
+    AgentStateChangedEvent,
 )
 from livekit.agents import Agent, AgentSession, inference
 from livekit.plugins import silero, turn_detector
@@ -57,6 +60,51 @@ async def entrypoint(ctx: JobContext, pdf_path: str = None):
             language="en",
         ),
     )
+    
+    """# 1. USER SPEECH (STT)
+    @session.on("user_input_transcribed")
+    def on_user_input_transcribed(event: UserInputTranscribedEvent):
+        if event.is_final:
+            asyncio.create_task(ctx.room.local_participant.publish_data(
+                payload=event.transcript.encode('utf-8'),
+                topic="chat_user"
+            ))
+
+    # 2. AGENT RESPONSE (LLM)
+    @session.on("conversation_item_added")
+    def on_conversation_item_added(event: ConversationItemAddedEvent):
+        if event.item.role == "agent":
+            # Safely extract text content
+            text = ""
+            if hasattr(event.item, "content"):
+                for content in event.item.content:
+                    if hasattr(content, "text"):
+                        text += content.text
+                    elif isinstance(content, str):
+                        text += content
+            
+            if text:
+                asyncio.create_task(ctx.room.local_participant.publish_data(
+                    payload=text.encode('utf-8'),
+                    topic="chat"
+                ))"""
+
+    # 3. AGENT STATE (Sync with Visualizer)
+    @session.on("agent_state_changed")
+    def on_agent_state_changed(event: AgentStateChangedEvent):
+        # Convert the Enum to a simple string (e.g. "speaking", "listening")
+        state_str = str(event.new_state).lower()
+        
+        # If it comes as "agentstate.speaking", clean it
+        if "." in state_str:
+            state_str = state_str.split(".")[-1]
+
+        logger.info(f"🧠 Agent State: {state_str}")
+        
+        asyncio.create_task(ctx.room.local_participant.publish_data(
+            payload=state_str.encode('utf-8'),
+            topic="state"
+        ))
 
     await session.start(room=ctx.room, agent=proctor_agent)
 

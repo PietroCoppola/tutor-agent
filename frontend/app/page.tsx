@@ -10,6 +10,7 @@ import {
   ControlBar,
   useConnectionState,
   useTracks,
+  useDataChannel,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Track, ConnectionState } from "livekit-client";
@@ -195,9 +196,12 @@ export default function Home() {
                   <Transcript /> 
 
                   {/* BOTTOM CONTROLS AREA */}
-                  <div className="p-6 bg-black/20 backdrop-blur-md border-t border-white/5 flex flex-col gap-6">
+                  <div className="p-6 bg-black/20 backdrop-blur-md border-t border-white/5 flex flex-col items-center gap-6">
+                      
+                      {/* The Visualizer will now be centered because of 'items-center' above */}
                       <AgentVisualizer />
-                      <div className="flex justify-center">
+                      
+                      <div className="flex justify-center w-full">
                         <ControlBar 
                           controls={{ microphone: true, camera: false, screenShare: false, leave: true }} 
                           variation="minimal"
@@ -215,11 +219,25 @@ export default function Home() {
 }
 
 function AgentVisualizer() {
-  const connectionState = useConnectionState(); // <--- NEW: Track connection status
+  const connectionState = useConnectionState();
   const tracks = useTracks([Track.Source.Microphone]);
   const agentTrack = tracks.find((t) => t.participant.identity !== "me" && !t.participant.isLocal);
+  
+  // State for the visualizer (default to 'listening')
+  const [agentState, setAgentState] = useState<"speaking" | "listening" | "thinking">("listening");
+  const decoder = new TextDecoder();
 
-  // Show a "Loading" state while connecting
+  // Listen for state updates from Python
+  useDataChannel((payload) => {
+    if (payload.topic === "state") {
+      const stateStr = decoder.decode(payload.payload).toLowerCase();
+      // Map raw strings to valid Visualizer states
+      if (stateStr.includes("speaking")) setAgentState("speaking");
+      else if (stateStr.includes("thinking")) setAgentState("thinking");
+      else setAgentState("listening");
+    }
+  });
+
   if (connectionState !== ConnectionState.Connected) {
     return (
       <div className="h-32 w-full max-w-sm bg-black/40 rounded-2xl flex items-center justify-center border border-white/5 shadow-inner">
@@ -232,13 +250,20 @@ function AgentVisualizer() {
   }
 
   return (
-    <div className="h-32 w-full max-w-sm bg-black/40 rounded-2xl flex items-center justify-center border border-white/5 shadow-inner">
+    <div className="h-32 w-full max-w-sm bg-black/40 rounded-2xl flex items-center justify-center border border-white/5 shadow-inner transition-colors duration-500">
+      {/* Optional: Add a text label for the state */}
+      <div className="absolute -top-6 text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold">
+        {agentState === "speaking" ? "Speaking" : agentState === "thinking" ? "Thinking" : "Listening"}
+      </div>
+
       <BarVisualizer
         trackRef={agentTrack} 
-        state="speaking" 
+        state={agentState} // <--- NOW DYNAMIC
         barCount={7}
         className="h-16 gap-2"
         style={{ height: "60px" }}
+        // Optional: Change color based on state
+        options={{ minHeight: 5 }} 
       />
     </div>
   );
