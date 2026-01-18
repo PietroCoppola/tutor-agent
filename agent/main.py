@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import os
+import json
 import requests
 from dotenv import load_dotenv
 
@@ -9,8 +10,8 @@ from livekit.agents import (
     JobContext,
     WorkerOptions,
     cli,
-    #UserInputTranscribedEvent,
-    #ConversationItemAddedEvent,
+    UserInputTranscribedEvent,
+    ConversationItemAddedEvent,
     AgentStateChangedEvent,
 )
 from livekit.agents import Agent, AgentSession, inference
@@ -25,20 +26,47 @@ except ImportError:
 load_dotenv()
 logger = logging.getLogger("studeo-agent")
 
+# Helper: Load specific agent content from the JSON DB
+def load_agent_content(agent_id: str) -> str:
+    try:
+        # Construct path to agents.json relative to this script
+        db_path = os.path.join(os.path.dirname(__file__), "agents.json")
+        
+        if not os.path.exists(db_path):
+            # Fallback if DB doesn't exist yet
+            return "Error: No agent database found. Please create an agent first."
+            
+        with open(db_path, "r") as f:
+            data = json.load(f)
+            # Look up the agent by ID, return its content or a default message
+            return data.get(agent_id, {}).get("content", "No content found for this agent.")
+            
+    except Exception as e:
+        logger.error(f"Failed to load agent content: {e}")
+        return "System error loading exam content."
 
-def load_material_for_agent() -> str:
-    cached = load_study_material_cache()
-    if cached:
-        return cached
-    pdf_path = os.getenv("PDF_PATH", "study_guide.pdf")
-    return get_study_material(pdf_path)
 
-
-async def entrypoint(ctx: JobContext, pdf_path: str = None):
+async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    study_material = load_material_for_agent()
+    # 1. WAIT FOR USER TO JOIN (Critical for getting metadata)
+    participant = await ctx.wait_for_participant()
+    
+    # 2. EXTRACT AGENT ID FROM METADATA
+    agent_id = "default"
+    if participant.metadata:
+        try:
+            import json
+            meta = json.loads(participant.metadata)
+            agent_id = meta.get("agentId", "default")
+            logger.info(f"📚 Student requested Agent ID: {agent_id}")
+        except:
+            logger.warning("Could not parse metadata, defaulting to 'default' agent.")
 
+    # 3. LOAD THE SPECIFIC CONTENT
+    study_material = load_agent_content(agent_id)
+
+    # 4. START THE AGENT
     proctor_agent = Agent(
         instructions=(
             f"You are Studeo, a strict but fair oral exam proctor. "
@@ -60,21 +88,25 @@ async def entrypoint(ctx: JobContext, pdf_path: str = None):
             language="en",
         ),
     )
-    
-    """# 1. USER SPEECH (STT)
+
+    # ... inside entrypoint ...
+
+    # 1. USER SPEECH (Keep this, it works)
     @session.on("user_input_transcribed")
     def on_user_input_transcribed(event: UserInputTranscribedEvent):
         if event.is_final:
+            print(f"🎤 User: {event.transcript}")
             asyncio.create_task(ctx.room.local_participant.publish_data(
                 payload=event.transcript.encode('utf-8'),
                 topic="chat_user"
             ))
 
-    # 2. AGENT RESPONSE (LLM)
     @session.on("conversation_item_added")
     def on_conversation_item_added(event: ConversationItemAddedEvent):
-        if event.item.role == "agent":
-            # Safely extract text content
+        # FIX: Accept "assistant" (standard) or "agent" (legacy)
+        if event.item.role in ["agent", "assistant"]:
+            
+            # Extract text content safely
             text = ""
             if hasattr(event.item, "content"):
                 for content in event.item.content:
@@ -83,11 +115,13 @@ async def entrypoint(ctx: JobContext, pdf_path: str = None):
                     elif isinstance(content, str):
                         text += content
             
+            # If we found text, send it to the frontend!
             if text:
+                print(f"🤖 Studeo: {text[:50]}...") # Log first 50 chars
                 asyncio.create_task(ctx.room.local_participant.publish_data(
                     payload=text.encode('utf-8'),
                     topic="chat"
-                ))"""
+                ))
 
     # 3. AGENT STATE (Sync with Visualizer)
     @session.on("agent_state_changed")
