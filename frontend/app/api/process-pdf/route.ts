@@ -59,26 +59,57 @@ export async function POST(request: NextRequest) {
     // Clean up temp file
     await unlink(tempFilePath);
 
+    type ProcessorResult = {
+      success?: boolean;
+      error?: string;
+      data?: unknown;
+    };
+
     // Parse the output from Python
-    let result;
+    let result: ProcessorResult | null = null;
     try {
-        result = JSON.parse(outputData);
+      result = JSON.parse(outputData);
     } catch {
-        // If it's not JSON, it might be raw text or mixed output
+      const lines = outputData
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      for (let i = lines.length - 1; i >= 0; i -= 1) {
+        const line = lines[i];
+        if (line.startsWith("{") && line.endsWith("}")) {
+          try {
+            result = JSON.parse(line);
+            break;
+          } catch {
+            // Ignore and keep searching
+          }
+        }
+      }
+
+      if (!result) {
         return NextResponse.json(
-            { error: "Invalid response from processor" },
-            { status: 500 }
+          { error: "Invalid response from processor" },
+          { status: 500 }
         );
+      }
     }
 
-    if (result.error) {
-        return NextResponse.json(
-            { error: result.error },
-            { status: 500 }
-        );
+    if (result && result.error) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json(result);
+    if (result && result.success) {
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json(
+      { error: "Unexpected processor response" },
+      { status: 500 }
+    );
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
