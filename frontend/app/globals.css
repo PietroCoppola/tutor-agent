@@ -69,3 +69,19 @@ body {
 .studeo-card-float {
   animation: st-float 16s ease-in-out infinite alternate;
 }
+
+@keyframes studeo-caret {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-studeo-caret {
+  animation: studeo-caret 0.9s steps(1, end) infinite;
+}

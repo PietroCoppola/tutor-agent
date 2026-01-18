@@ -1,12 +1,29 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
+
+const HERO_TEXT = "Hi. I'm Studeo, your brand-new studying partner.";
+const TYPING_INTERVAL_MS = 40;
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [typedText, setTypedText] = useState("");
+
+  useEffect(() => {
+    let index = 0;
+    const interval = setInterval(() => {
+      index += 1;
+      setTypedText(HERO_TEXT.slice(0, index));
+      if (index >= HERO_TEXT.length) {
+        clearInterval(interval);
+      }
+    }, TYPING_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] ?? null;
@@ -75,8 +92,16 @@ export default function Home() {
       <main className="relative z-10 flex min-h-screen items-center justify-center px-6">
         <div className="w-full max-w-3xl px-4 sm:px-0">
           <div className="mb-16 space-y-6 text-center sm:text-left">
-            <h1 className="text-5xl font-bold leading-tight text-white sm:text-6xl md:text-7xl tracking-tight drop-shadow-sm">
-              Hi. I&apos;m Studeo, your brand-new studying partner.
+            <h1 className="relative text-5xl font-bold leading-tight text-white sm:text-6xl md:text-7xl tracking-tight drop-shadow-sm">
+              <span className="opacity-0">
+                {HERO_TEXT}
+              </span>
+              <span className="absolute left-0 top-0">
+                <span>{typedText}</span>
+                <span className="inline-block w-[1ch] animate-studeo-caret align-baseline">
+                  |
+                </span>
+              </span>
             </h1>
           </div>
 
