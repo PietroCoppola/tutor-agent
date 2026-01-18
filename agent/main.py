@@ -17,55 +17,15 @@ from livekit.plugins import silero, turn_detector
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 try:
-    from .pdf_utils import pdf_to_string
+    from .study_material import get_study_material
 except ImportError:
-    from pdf_utils import pdf_to_string
+    from study_material import get_study_material
 
 load_dotenv()
 logger = logging.getLogger("studeo-agent")
 
-# --- 1. THE TOKEN COMPANY LOGIC ---
-def get_study_material(pdf_path: str = None):
-    # 1. READ PDF (If provided)
-    pdf_text = ""
-    if pdf_path and os.path.exists(pdf_path):
-        logger.info(f"Reading PDF from: {pdf_path}")
-        pdf_text = pdf_to_string(pdf_path)
-    else:
-        # Fallback for hackathon demo if no PDF is found
-        pdf_text = "History of the Internet. Key Concept: ARPANET (1969)."
-
-    # 2. CALL TOKEN COMPANY
-    # Only call if we have substantial text, otherwise mock it to save API calls
-    if len(pdf_text) > 100: 
-        logger.info("Compressing text with The Token Company...")
-        try:
-            response = requests.post(
-                "https://api.thetokencompany.com/v1/compress",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer ttc_sk_VLh1ccJqgS77Dl_R49vxWNSOgl-C4NoHo_rLS96xWYo"
-                },
-                json={
-                    "model": "bear-1",
-                    "compression_settings": {
-                        "aggressiveness": 0.5
-                    },
-                    "input": pdf_text
-                }
-            )
-            response.raise_for_status()
-            return response.json()["output"]
-        except Exception as e:
-            logger.error(f"Compression failed: {e}")
-            return pdf_text[:500] + "..." # Fallback
-    
-    return pdf_text
-
-# --- 2. ENTRYPOINT ---
-async def entrypoint(ctx: JobContext):
-    # Connect
-    logger.info(f"Connecting to room {ctx.room.name}...")
+async def entrypoint(ctx: JobContext, pdf_path: str = None):
+    # Connect to the room
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
     # Get Material (Hardcoded path for hackathon simplicity, or use env var)
