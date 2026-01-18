@@ -12,7 +12,7 @@ from livekit.agents import (
     cli,
 )
 # 'VoiceAssistant' is gone. We now use Agent + AgentSession.
-from livekit.agents import Agent, AgentSession
+from livekit.agents import Agent, AgentSession, inference
 from livekit.plugins import silero, turn_detector
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
@@ -80,7 +80,7 @@ async def entrypoint(ctx: JobContext):
         instructions=(
             f"You are Studeo, a strict but fair oral exam proctor. "
             f"Your knowledge base is strictly limited to: {study_material}. "
-            "Do not answer questions outside of this material. "
+            "Do not answer or ask questions outside of this material. "
             "Ask one question at a time. Wait for their answer. "
             "If they are wrong, correct them briefly. Keep responses concise."
         )
@@ -99,7 +99,11 @@ async def entrypoint(ctx: JobContext):
         # 3. The "Free" Stack (LiveKit Inference)
         stt="deepgram/nova-2", 
         llm="openai/gpt-4o", 
-        tts="elevenlabs/eleven_flash_v2_5",
+        tts=inference.TTS(
+        model="elevenlabs/eleven_turbo_v2_5", 
+        voice="Xb7hH8MSUJpSbSDYk0k2", 
+        language="en"
+        ),
     )
 
     # C. START
